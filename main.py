@@ -3,19 +3,25 @@ import numpy as np
 from deepface import DeepFace
 from load_faces import load_known_faces
 
-THRESHOLD = 300
-SCALE = 0.25
+THRESHOLD = 1  # cosine-normalized Euclidean — ปรับลงถ้ายัง false positive
+SCALE = 0.25  # 50% ดีกว่า 25% สำหรับ accuracy
 
 person_face_encodings, person_face_labels = load_known_faces()
+
+
+def normalize(v):
+    n = np.linalg.norm(v)
+    return v / n if n > 0 else v
 
 
 def find_match(embedding, encodings, labels):
     if not encodings:
         return {"name": "UNKNOWN", "surname": "", "gender": ""}, 9999.0
+    emb = normalize(np.array(embedding))
     min_dist = float("inf")
     match_label = None
     for known_enc, label in zip(encodings, labels):
-        dist = np.linalg.norm(np.array(embedding) - np.array(known_enc))
+        dist = np.linalg.norm(emb - normalize(np.array(known_enc)))
         name = f"{label['name']} {label['surname']}".strip()
         print(f"  dist to {name}: {dist:.4f}")
         if dist < min_dist:
@@ -28,14 +34,20 @@ def find_match(embedding, encodings, labels):
     return {"name": "UNKNOWN", "surname": "", "gender": ""}, min_dist
 
 
-cap = cv2.VideoCapture("videos/test.mp4")
+INPUT_VIDEO = "videos/test.mp4"
+# INPUT_VIDEO = "videos/western.mp4"
+input_stem = INPUT_VIDEO.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+
+cap = cv2.VideoCapture(INPUT_VIDEO)
 
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-out = cv2.VideoWriter("videos/output_video.mp4", fourcc, fps, (width, height))
+out = cv2.VideoWriter(
+    f"videos/{input_stem}_output_video.mp4", fourcc, fps, (width, height)
+)
 
 process_frame = True
 data_locations, data_labels, data_distances = [], [], []
