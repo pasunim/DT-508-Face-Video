@@ -9,11 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-# Database
-face-video.db
-
-# Videos
-videos/
-
 # macOS
 .DS_Store
